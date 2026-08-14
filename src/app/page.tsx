@@ -9,28 +9,43 @@ import {
 export default function Home() {
   const [color, setColor] = useState("#0066FF");
   const [palette, setPalette] = useState<ColorScale[]>([]);
+  const [copiedStep, setCopiedStep] = useState<number | null>(null);
 
   function generatePalette() {
-  console.log("Generate clicked");
-  console.log("Color:", color);
+    console.log("Generate clicked");
+    console.log("Color:", color);
 
-  try {
-    const generated = generateColorScale(color);
+    try {
+      const generated = generateColorScale(color);
 
-    console.log("Generated palette:", generated);
+      console.log("Generated palette:", generated);
 
-    setPalette(generated);
-  } catch (error) {
-    console.error("Palette generation failed:", error);
-    setPalette([]);
+      setPalette(generated);
+    } catch (error) {
+      console.error("Palette generation failed:", error);
+      setPalette([]);
+    }
   }
-}
+
+  async function copyColor(item: ColorScale) {
+    try {
+      await navigator.clipboard.writeText(item.hex);
+
+      setCopiedStep(item.step);
+
+      setTimeout(() => {
+        setCopiedStep(null);
+      }, 1500);
+    } catch (error) {
+      console.error("Failed to copy color:", error);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-white px-6 py-12 text-gray-900">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-5xl px-6 py-16">
         <header className="mb-12">
-          <p className="mb-3 text-sm font-medium text-gray-500">
+          <p className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
             COLORLAB
           </p>
 
@@ -93,38 +108,55 @@ export default function Home() {
             </div>
 
             <div className="grid gap-3">
-  {palette.map((item) => (
-    <div
-      key={item.step}
-      className={`flex items-center gap-4 rounded-xl border p-3 ${
-        item.step === 500
-          ? "border-2 border-black"
-          : "border-gray-200"
-      }`}
-    >
-      <div
-        className="h-16 w-20 rounded-lg"
-        style={{
-          backgroundColor: item.hex,
-        }}
-      />
+              {palette.map((item) => {
+                const isBase = item.step === 500;
+                const isCopied = copiedStep === item.step;
 
-      <div className="w-16 text-sm font-medium">
-        {item.step}
-      </div>
+                return (
+                  <div
+                    key={item.step}
+                    className={`group flex items-center gap-4 rounded-xl border p-3 transition ${
+                      isBase
+                        ? "border-2 border-black"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div
+                      className="h-16 w-20 shrink-0 rounded-lg"
+                      style={{
+                        backgroundColor: item.hex,
+                      }}
+                    />
 
-      <div className="font-mono text-sm text-gray-600">
-        {item.hex}
-      </div>
+                    <div className="w-16 shrink-0">
+                      <div className="text-sm font-medium">
+                        {item.step}
+                      </div>
 
-      {item.step === 500 && (
-        <div className="ml-auto rounded-full bg-black px-3 py-1 text-xs font-medium text-white">
-          Base
-        </div>
-      )}
-    </div>
-  ))}
-</div>
+                      {isBase && (
+                        <div className="mt-1 inline-flex rounded-full bg-black px-2 py-0.5 text-[10px] font-medium text-white">
+                          Base
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="font-mono text-sm uppercase text-gray-700">
+                        {item.hex}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => copyColor(item)}
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium transition hover:bg-gray-50"
+                    >
+                      {isCopied ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </section>
         )}
       </div>
