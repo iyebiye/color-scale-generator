@@ -1,12 +1,12 @@
 "use client";
 
 import type { KeyboardEvent } from "react";
-import type { ColorScale } from "@/lib/colors/generate-scale";
+import type { ColorToken } from "@/lib/colors/generate-scale";
 import { getOklch, getRgb } from "@/lib/colors/format-color";
 import ColorValue from "./ColorValue";
 
 type ColorCardProps = {
-  color: ColorScale;
+  color: ColorToken;
   isExpanded: boolean;
   copiedValue: string | null;
   onCopy: (value: string) => void;
@@ -29,7 +29,9 @@ export default function ColorCard({
     onCopy(color.hex);
   }
 
-  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+  function handleKeyDown(
+    event: KeyboardEvent<HTMLDivElement>
+  ) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       onCopy(color.hex);

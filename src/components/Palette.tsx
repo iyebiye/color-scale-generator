@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import type { ColorScale } from "@/lib/colors/generate-scale";
+import type {
+  ColorScale,
+} from "@/lib/colors/generate-scale";
 import ColorCard from "./ColorCard";
 
 type PaletteProps = {
-  palette: ColorScale[];
+  palette: ColorScale;
   copiedValue: string | null;
   onCopy: (value: string) => void;
 };
@@ -15,11 +17,9 @@ export default function Palette({
   copiedValue,
   onCopy,
 }: PaletteProps) {
-  const [expandedStep, setExpandedStep] = useState<number | null>(null);
-
-  if (palette.length === 0) {
-    return null;
-  }
+  const [expandedStep, setExpandedStep] = useState<number | null>(
+    null
+  );
 
   function toggleDetails(step: number) {
     setExpandedStep((current) =>
@@ -31,7 +31,7 @@ export default function Palette({
     <section>
       <div className="mb-6">
         <h2 className="text-2xl font-semibold">
-          Your palette
+          {palette.name}
         </h2>
 
         <p className="mt-1 text-sm text-gray-500">
@@ -40,7 +40,7 @@ export default function Palette({
       </div>
 
       <div className="grid gap-3">
-        {palette.map((color) => (
+        {palette.tokens.map((color) => (
           <ColorCard
             key={color.step}
             color={color}

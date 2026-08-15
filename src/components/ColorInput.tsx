@@ -1,16 +1,40 @@
 type ColorInputProps = {
+  name: string;
   color: string;
+  onNameChange: (name: string) => void;
   onColorChange: (color: string) => void;
   onGenerate: () => void;
 };
 
 export default function ColorInput({
+  name,
   color,
+  onNameChange,
   onColorChange,
   onGenerate,
 }: ColorInputProps) {
   return (
     <section className="mb-12 rounded-2xl border border-gray-200 p-6">
+      <div className="mb-6">
+        <label
+          htmlFor="color-name"
+          className="mb-3 block text-sm font-medium"
+        >
+          Color name
+        </label>
+
+        <input
+          id="color-name"
+          type="text"
+          value={name}
+          onChange={(event) =>
+            onNameChange(event.target.value)
+          }
+          className="h-12 w-full rounded-lg border border-gray-200 px-4 text-sm outline-none focus:border-gray-400"
+          placeholder="Primary"
+        />
+      </div>
+
       <label
         htmlFor="color"
         className="mb-3 block text-sm font-medium"
