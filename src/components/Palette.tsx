@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type {
-  ColorScale,
-} from "@/lib/colors/generate-scale";
+import type { ColorScale } from "@/lib/colors/generate-scale";
 import ColorCard from "./ColorCard";
 
 type PaletteProps = {
@@ -17,9 +15,7 @@ export default function Palette({
   copiedValue,
   onCopy,
 }: PaletteProps) {
-  const [expandedStep, setExpandedStep] = useState<number | null>(
-    null
-  );
+  const [expandedStep, setExpandedStep] = useState<number | null>(null);
 
   function toggleDetails(step: number) {
     setExpandedStep((current) =>
@@ -29,8 +25,8 @@ export default function Palette({
 
   return (
     <section>
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold">
+      <div>
+        <h2 className="text-xl font-semibold">
           {palette.name}
         </h2>
 
@@ -44,6 +40,7 @@ export default function Palette({
           <ColorCard
             key={color.step}
             color={color}
+            isBase={color.step === palette.baseStep}
             isExpanded={expandedStep === color.step}
             copiedValue={copiedValue}
             onCopy={onCopy}

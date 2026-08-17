@@ -1,8 +1,4 @@
-import {
-  converter,
-  formatHex,
-  type Hsl,
-} from "culori";
+import { converter, formatHex, type Hsl } from "culori";
 
 export type ColorToken = {
   step: number;
@@ -11,6 +7,7 @@ export type ColorToken = {
 
 export type ColorScale = {
   name: string;
+  baseStep: number;
   tokens: ColorToken[];
 };
 
@@ -35,11 +32,7 @@ function clamp(value: number): number {
 /**
  * Interpolate between two numbers.
  */
-function interpolate(
-  start: number,
-  end: number,
-  amount: number
-): number {
+function interpolate(start: number, end: number, amount: number): number {
   return start + (end - start) * amount;
 }
 
@@ -47,11 +40,7 @@ function interpolate(
  * Interpolate hue using the shortest path around
  * the color wheel.
  */
-function interpolateHue(
-  start: number,
-  end: number,
-  amount: number
-): number {
+function interpolateHue(start: number, end: number, amount: number): number {
   let difference = end - start;
 
   if (difference > 180) {
@@ -62,17 +51,13 @@ function interpolateHue(
     difference += 360;
   }
 
-  return ((start + difference * amount) + 360) % 360;
+  return (start + difference * amount + 360) % 360;
 }
 
 /**
  * Create an HSL color.
  */
-function createHsl(
-  h: number,
-  s: number,
-  l: number
-): HslColor {
+function createHsl(h: number, s: number, l: number): HslColor {
   return {
     h: ((h % 360) + 360) % 360,
     s: clamp(s),
@@ -108,11 +93,7 @@ function getPerceivedBrightness(hex: string): number {
   const g = rgb.g ?? 0;
   const b = rgb.b ?? 0;
 
-  return (
-    0.299 * r +
-    0.587 * g +
-    0.114 * b
-  );
+  return 0.299 * r + 0.587 * g + 0.114 * b;
 }
 
 /**
@@ -196,7 +177,7 @@ function getBrightHue(hue: number): number {
 function moveHueToward(
   hue: number,
   target: number,
-  maxRotation: number
+  maxRotation: number,
 ): number {
   let difference = target - hue;
 
@@ -208,12 +189,9 @@ function moveHueToward(
     difference += 360;
   }
 
-  const rotation = Math.min(
-    Math.abs(difference),
-    maxRotation
-  );
+  const rotation = Math.min(Math.abs(difference), maxRotation);
 
-  return ((hue + Math.sign(difference) * rotation) + 360) % 360;
+  return (hue + Math.sign(difference) * rotation + 360) % 360;
 }
 
 /**
@@ -222,12 +200,12 @@ function moveHueToward(
 function interpolateColor(
   start: HslColor,
   end: HslColor,
-  amount: number
+  amount: number,
 ): HslColor {
   return createHsl(
     interpolateHue(start.h, end.h, amount),
     interpolate(start.s, end.s, amount),
-    interpolate(start.l, end.l, amount)
+    interpolate(start.l, end.l, amount),
   );
 }
 
@@ -245,7 +223,7 @@ function interpolateColor(
  */
 export function generateColorScale(
   baseColor: string,
-  name = "Primary"
+  name = "Primary",
 ): ColorScale {
   const parsed = toHsl(baseColor) as Hsl | undefined;
 
@@ -253,87 +231,123 @@ export function generateColorScale(
     throw new Error("Invalid color");
   }
 
-  const base = createHsl(
-    parsed.h ?? 0,
-    parsed.s ?? 0,
-    parsed.l ?? 0.5
-  );
+  const base = createHsl(parsed.h ?? 0, parsed.s ?? 0, parsed.l ?? 0.5);
 
   const baseHex = formatHex(parsed);
 
-  const isWhite = base.l >= 0.999;
-  const isBlack = base.l <= 0.001;
+  const isVeryLight = base.l >= 0.92;
+  const isVeryDark = base.l <= 0.08;
   const neutral = isNeutral(base);
 
-  /*
-   * -----------------------------------------------
-   * NEUTRAL COLORS
-   * -----------------------------------------------
-   *
-   * Greys should stay neutral.
-   *
-   * We don't want:
-   *
-   * #FFFFFF → warm grey
-   *
-   * or:
-   *
-   * #000000 → reddish black
-   */
   if (neutral) {
+    /*
+     * Neutral scales use lightness as the primary dimension.
+     *
+     * Very light neutrals:
+     * The input becomes 50.
+     *
+     * Very dark neutrals:
+     * The input becomes 950.
+     *
+     * Normal neutrals:
+     * The input remains 500.
+     */
+
     const neutralLightness: Record<number, number> = {
       50: 0.98,
       100: 0.95,
-      200: 0.90,
+      200: 0.9,
       300: 0.82,
-      400: 0.70,
-      500: base.l,
-      600: 0.42,
-      700: 0.32,
-      800: 0.22,
+      400: 0.72,
+      500: 0.6,
+      600: 0.48,
+      700: 0.36,
+      800: 0.24,
       900: 0.12,
       950: 0.06,
     };
 
-    const tokens = steps
-      .filter((step) => {
-        if (isWhite && step > 500) {
-          return true;
+    const tokens: ColorToken[] = [];
+
+    let baseStep = 500;
+
+    if (isVeryLight) {
+      baseStep = 50;
+    } else if (isVeryDark) {
+      baseStep = 950;
+    }
+
+    for (const step of steps) {
+      /*
+       * Very light neutral.
+       *
+       * Example:
+       * #FFFFFF → 50
+       * #FAFAFA → 50
+       */
+      if (isVeryLight) {
+        if (step === 50) {
+          tokens.push({
+            step,
+            hex: baseHex,
+          });
+          continue;
         }
 
-        if (isBlack && step < 500) {
-          return true;
+        tokens.push({
+          step,
+          hex: hslToHex(createHsl(0, 0, neutralLightness[step])),
+        });
+
+        continue;
+      }
+
+      /*
+       * Very dark neutral.
+       *
+       * Example:
+       * #000000 → 950
+       * #0A0A0A → 950
+       */
+      if (isVeryDark) {
+        if (step === 950) {
+          tokens.push({
+            step,
+            hex: baseHex,
+          });
+          continue;
         }
 
-        return true;
-      })
-      .filter((step) => {
-        if (isWhite) {
-          return step >= 500;
-        }
+        tokens.push({
+          step,
+          hex: hslToHex(createHsl(0, 0, neutralLightness[step])),
+        });
 
-        if (isBlack) {
-          return step <= 500;
-        }
+        continue;
+      }
 
-        return true;
-      })
-      .map((step) => ({
+      /*
+       * Normal neutral.
+       *
+       * The input remains the 500 token.
+       */
+      if (step === 500) {
+        tokens.push({
+          step,
+          hex: baseHex,
+        });
+        continue;
+      }
+
+      tokens.push({
         step,
-        hex:
-          step === 500
-            ? baseHex
-            : hslToHex(
-                createHsl(
-                  0,
-                  0,
-                  neutralLightness[step]
-                )
-              ),
-      }));
+        hex: hslToHex(createHsl(0, 0, neutralLightness[step])),
+      });
+    }
 
     return {
       name,
+      baseStep,
       tokens,
     };
   }
@@ -357,10 +371,7 @@ export function generateColorScale(
    * Highly saturated colors get slightly more rotation,
    * but never more than 20°.
    */
-  const maxHueRotation = Math.min(
-    20,
-    Math.max(6, base.s * 20)
-  );
+  const maxHueRotation = Math.min(20, Math.max(6, base.s * 20));
 
   /*
    * Light anchor.
@@ -369,13 +380,9 @@ export function generateColorScale(
    * slightly increasing saturation.
    */
   const lightAnchor = createHsl(
-    moveHueToward(
-      base.h,
-      brightHue,
-      maxHueRotation
-    ),
+    moveHueToward(base.h, brightHue, maxHueRotation),
     clamp(base.s * 1.08 + 0.02),
-    Math.min(0.96, Math.max(0.90, base.l + 0.42))
+    Math.min(0.96, Math.max(0.9, base.l + 0.42)),
   );
 
   /*
@@ -384,13 +391,9 @@ export function generateColorScale(
    * We move toward the nearest perceived-dark hue.
    */
   const darkAnchor = createHsl(
-    moveHueToward(
-      base.h,
-      darkHue,
-      maxHueRotation
-    ),
+    moveHueToward(base.h, darkHue, maxHueRotation),
     clamp(base.s * 1.08 + 0.02),
-    Math.max(0.08, Math.min(0.18, base.l - 0.32))
+    Math.max(0.08, Math.min(0.18, base.l - 0.32)),
   );
 
   /*
@@ -409,7 +412,7 @@ export function generateColorScale(
    */
   const darkAmounts: Record<number, number> = {
     600: 0.18,
-    700: 0.40,
+    700: 0.4,
     800: 0.62,
     900: 1,
     950: 1.08,
@@ -430,34 +433,12 @@ export function generateColorScale(
       continue;
     }
 
-    /*
-     * White cannot have lighter shades.
-     */
-    if (isWhite && step < 500) {
-      continue;
-    }
-
-    /*
-     * Black cannot have darker shades.
-     */
-    if (isBlack && step > 500) {
-      continue;
-    }
-
     let color: HslColor;
 
     if (step < 500) {
-      color = interpolateColor(
-        lightAnchor,
-        base,
-        lightAmounts[step]
-      );
+      color = interpolateColor(lightAnchor, base, lightAmounts[step]);
     } else {
-      color = interpolateColor(
-        base,
-        darkAnchor,
-        darkAmounts[step]
-      );
+      color = interpolateColor(base, darkAnchor, darkAmounts[step]);
     }
 
     /*
@@ -466,17 +447,11 @@ export function generateColorScale(
      * As we approach either extreme, saturation tends
      * to become visually weaker. We compensate slightly.
      */
-    const distanceFromMiddle =
-      Math.abs(color.l - 0.5);
+    const distanceFromMiddle = Math.abs(color.l - 0.5);
 
-    const saturationBoost =
-      distanceFromMiddle * base.s * 0.12;
+    const saturationBoost = distanceFromMiddle * base.s * 0.12;
 
-    color = createHsl(
-      color.h,
-      clamp(color.s + saturationBoost),
-      color.l
-    );
+    color = createHsl(color.h, clamp(color.s + saturationBoost), color.l);
 
     tokens.push({
       step,
@@ -495,15 +470,14 @@ export function generateColorScale(
       tokens.map((token) => ({
         step: token.step,
         hex: token.hex,
-        brightness: Number(
-          getPerceivedBrightness(token.hex).toFixed(3)
-        ),
-      }))
+        brightness: Number(getPerceivedBrightness(token.hex).toFixed(3)),
+      })),
     );
   }
 
   return {
     name,
+    baseStep: 500,
     tokens,
   };
 }

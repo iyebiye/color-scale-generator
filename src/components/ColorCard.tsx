@@ -7,6 +7,7 @@ import ColorValue from "./ColorValue";
 
 type ColorCardProps = {
   color: ColorToken;
+  isBase: boolean;
   isExpanded: boolean;
   copiedValue: string | null;
   onCopy: (value: string) => void;
@@ -15,12 +16,12 @@ type ColorCardProps = {
 
 export default function ColorCard({
   color,
+  isBase,
   isExpanded,
   copiedValue,
   onCopy,
   onToggle,
 }: ColorCardProps) {
-  const isBase = color.step === 500;
 
   const rgb = getRgb(color.hex);
   const oklch = getOklch(color.hex);
