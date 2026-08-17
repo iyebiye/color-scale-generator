@@ -13,24 +13,26 @@ export default function Home() {
   const [color, setColor] = useState("#0066FF");
   const [palette, setPalette] = useState<ColorScale | null>(null);
   const [copiedValue, setCopiedValue] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   function generatePalette() {
     console.log("Generate clicked");
     console.log("Color:", color);
     console.log("Name:", name);
 
+    setError("");
+
     try {
-      const generated = generateColorScale(
-        color,
-        name || "primary"
-      );
+      const generated = generateColorScale(color, name || "Primary");
 
       console.log("Generated palette:", generated);
 
       setPalette(generated);
     } catch (error) {
       console.error("Palette generation failed:", error);
+
       setPalette(null);
+      setError("Enter a valid HEX color, e.g. #0066FF.");
     }
   }
 
@@ -61,16 +63,20 @@ export default function Home() {
           </h1>
 
           <p className="mt-4 max-w-xl text-lg text-gray-600">
-            Generate tints and shades, refine your palette, and
-            take it directly into your design workflow.
+            Generate tints and shades, refine your palette, and take it directly
+            into your design workflow.
           </p>
         </header>
 
         <ColorInput
           name={name}
           color={color}
+          error={error}
           onNameChange={setName}
-          onColorChange={setColor}
+          onColorChange={(value) => {
+            setColor(value);
+            setError("");
+          }}
           onGenerate={generatePalette}
         />
 
