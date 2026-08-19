@@ -7,6 +7,7 @@ import {
 } from "@/lib/colors/generate-scale";
 import ColorInput from "@/components/ColorInput";
 import Palette from "@/components/Palette";
+import CssExport from "@/components/CssExport";
 
 export default function Home() {
   const [name, setName] = useState("Primary");
@@ -148,6 +149,8 @@ export default function Home() {
             onResetColor={resetColor}
           />
         )}
+
+        {palette && <CssExport palette={palette} />}
       </div>
     </main>
   );
