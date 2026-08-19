@@ -1,6 +1,7 @@
 import { converter, formatHex, type Hsl } from "culori";
 
 export type ColorToken = {
+  name: string;
   step: number;
   hex: string;
 };
@@ -19,8 +20,17 @@ type HslColor = {
 
 const toHsl = converter("hsl");
 const toRgb = converter("rgb");
+const toOklch = converter("oklch");
 
 const steps = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+
+function createToken(name: string, step: number, hex: string): ColorToken {
+  return {
+    name: `${name.toLowerCase()}-${step}`,
+    step,
+    hex,
+  };
+}
 
 /**
  * Keep a value between 0 and 1.
@@ -77,6 +87,41 @@ function hslToHex(color: HslColor): string {
   });
 }
 
+type OklchColor = {
+  l: number;
+  c: number;
+  h: number;
+};
+
+function createOklch(l: number, c: number, h: number): OklchColor {
+  return {
+    l: clamp(l),
+    c: Math.max(0, c),
+    h: ((h % 360) + 360) % 360,
+  };
+}
+
+function oklchToHex(color: OklchColor): string {
+  return formatHex({
+    mode: "oklch",
+    l: color.l,
+    c: color.c,
+    h: color.h,
+  });
+}
+
+function interpolateOklch(
+  start: OklchColor,
+  end: OklchColor,
+  amount: number,
+): OklchColor {
+  return createOklch(
+    interpolate(start.l, end.l, amount),
+    interpolate(start.c, end.c, amount),
+    interpolateHue(start.h, end.h, amount),
+  );
+}
+
 /**
  * Calculate perceived brightness using normalized RGB values.
  *
@@ -104,109 +149,6 @@ function getPerceivedBrightness(hex: string): number {
  */
 function isNeutral(color: HslColor): boolean {
   return color.s < 0.01;
-}
-
-/**
- * Find the nearest "dark" primary hue.
- *
- * These are the approximate perceived-darkness anchors:
- *
- * Red     0°
- * Green   120°
- * Blue    240°
- */
-function getDarkHue(hue: number): number {
-  const darkHues = [0, 120, 240];
-
-  let closest = darkHues[0];
-  let smallestDistance = Infinity;
-
-  for (const candidate of darkHues) {
-    let distance = Math.abs(hue - candidate);
-
-    if (distance > 180) {
-      distance = 360 - distance;
-    }
-
-    if (distance < smallestDistance) {
-      smallestDistance = distance;
-      closest = candidate;
-    }
-  }
-
-  return closest;
-}
-
-/**
- * Find the nearest "bright" primary/secondary hue.
- *
- * These are the approximate perceived-brightness anchors:
- *
- * Yellow   60°
- * Cyan     180°
- * Magenta  300°
- */
-function getBrightHue(hue: number): number {
-  const brightHues = [60, 180, 300];
-
-  let closest = brightHues[0];
-  let smallestDistance = Infinity;
-
-  for (const candidate of brightHues) {
-    let distance = Math.abs(hue - candidate);
-
-    if (distance > 180) {
-      distance = 360 - distance;
-    }
-
-    if (distance < smallestDistance) {
-      smallestDistance = distance;
-      closest = candidate;
-    }
-  }
-
-  return closest;
-}
-
-/**
- * Move a hue a limited distance toward a target.
- *
- * We intentionally cap the movement so the scale still
- * feels like the same color.
- */
-function moveHueToward(
-  hue: number,
-  target: number,
-  maxRotation: number,
-): number {
-  let difference = target - hue;
-
-  if (difference > 180) {
-    difference -= 360;
-  }
-
-  if (difference < -180) {
-    difference += 360;
-  }
-
-  const rotation = Math.min(Math.abs(difference), maxRotation);
-
-  return (hue + Math.sign(difference) * rotation + 360) % 360;
-}
-
-/**
- * Interpolate two HSL colors.
- */
-function interpolateColor(
-  start: HslColor,
-  end: HslColor,
-  amount: number,
-): HslColor {
-  return createHsl(
-    interpolateHue(start.h, end.h, amount),
-    interpolate(start.s, end.s, amount),
-    interpolate(start.l, end.l, amount),
-  );
 }
 
 /**
@@ -288,16 +230,20 @@ export function generateColorScale(
       if (isVeryLight) {
         if (step === 50) {
           tokens.push({
+            name,
             step,
             hex: baseHex,
           });
           continue;
         }
 
-        tokens.push({
-          step,
-          hex: hslToHex(createHsl(0, 0, neutralLightness[step])),
-        });
+        tokens.push(
+          createToken(
+            name,
+            step,
+            hslToHex(createHsl(0, 0, neutralLightness[step])),
+          ),
+        );
 
         continue;
       }
@@ -312,16 +258,20 @@ export function generateColorScale(
       if (isVeryDark) {
         if (step === 950) {
           tokens.push({
+            name,
             step,
             hex: baseHex,
           });
           continue;
         }
 
-        tokens.push({
-          step,
-          hex: hslToHex(createHsl(0, 0, neutralLightness[step])),
-        });
+        tokens.push(
+          createToken(
+            name,
+            step,
+            hslToHex(createHsl(0, 0, neutralLightness[step])),
+          ),
+        );
 
         continue;
       }
@@ -333,16 +283,20 @@ export function generateColorScale(
        */
       if (step === 500) {
         tokens.push({
+          name,
           step,
           hex: baseHex,
         });
         continue;
       }
 
-      tokens.push({
-        step,
-        hex: hslToHex(createHsl(0, 0, neutralLightness[step])),
-      });
+      tokens.push(
+        createToken(
+          name,
+          step,
+          hslToHex(createHsl(0, 0, neutralLightness[step])),
+        ),
+      );
     }
 
     return {
@@ -353,79 +307,111 @@ export function generateColorScale(
   }
 
   /*
-   * -----------------------------------------------
+   * ---
    * COLORED PALETTE
-   * -----------------------------------------------
-   */
-
-  /*
-   * Determine the hues that help us move toward
-   * visually brighter and darker versions.
-   */
-  const brightHue = getBrightHue(base.h);
-  const darkHue = getDarkHue(base.h);
-
-  /*
-   * Keep hue rotation subtle.
+   * ---
    *
-   * Highly saturated colors get slightly more rotation,
-   * but never more than 20°.
+   * Colored palettes always use 500 as the base token.
+   *
+   * The input color is preserved exactly at 500.
+   *
+   * We generate the lighter shades by moving toward a
+   * near-white version of the base color, and the darker
+   * shades by moving toward a near-black version.
+   *
+   * This is relative to the actual base color rather than
+   * using fixed OKLCH lightness values. This means:
+   *
+   * #FFFF00 → 500
+   * #0066FF → 500
+   * #FF0000 → 500
+   * #00AA66 → 500
+   * #8000FF → 500
+   *
+   * regardless of their natural perceptual lightness.
    */
-  const maxHueRotation = Math.min(20, Math.max(6, base.s * 20));
+
+  const baseStep = 500;
 
   /*
-   * Light anchor.
-   *
-   * We increase lightness substantially while also
-   * slightly increasing saturation.
+   * Convert the input color to OKLCH.
    */
-  const lightAnchor = createHsl(
-    moveHueToward(base.h, brightHue, maxHueRotation),
-    clamp(base.s * 1.08 + 0.02),
-    Math.min(0.96, Math.max(0.9, base.l + 0.42)),
+  const parsedOklch = toOklch(baseColor) as
+    | {
+        l?: number;
+        c?: number;
+        h?: number;
+      }
+    | undefined;
+
+  if (!parsedOklch) {
+    throw new Error("Invalid color");
+  }
+
+  const baseOklch = createOklch(
+    parsedOklch.l ?? 0.5,
+    parsedOklch.c ?? 0,
+    parsedOklch.h ?? base.h,
   );
 
   /*
-   * Dark anchor.
-   *
-   * We move toward the nearest perceived-dark hue.
+   * The input color must remain exactly as provided
+   * at the 500 step.
    */
-  const darkAnchor = createHsl(
-    moveHueToward(base.h, darkHue, maxHueRotation),
-    clamp(base.s * 1.08 + 0.02),
-    Math.max(0.08, Math.min(0.18, base.l - 0.32)),
-  );
+  const tokens: ColorToken[] = [];
 
   /*
-   * Light-side interpolation.
+   * Amounts determine how far each shade moves away
+   * from the base.
+   *
+   * The values are deliberately progressive rather
+   * than linear in lightness.
    */
   const lightAmounts: Record<number, number> = {
-    50: -0.15,
-    100: 0,
-    200: 0.35,
-    300: 0.62,
-    400: 0.82,
+    50: 1.0,
+    100: 0.82,
+    200: 0.64,
+    300: 0.46,
+    400: 0.25,
+  };
+
+  const darkAmounts: Record<number, number> = {
+    600: 0.18,
+    700: 0.36,
+    800: 0.56,
+    900: 0.78,
+    950: 1.0,
   };
 
   /*
-   * Dark-side interpolation.
+   * Light endpoint.
+   *
+   * We move toward a very light version of the color,
+   * while retaining some chroma so the palette still
+   * reads as the same hue.
+   *
+   * This is especially important for colors such as
+   * yellow, where the base color itself is already very
+   * light.
    */
-  const darkAmounts: Record<number, number> = {
-    600: 0.18,
-    700: 0.4,
-    800: 0.62,
-    900: 1,
-    950: 1.08,
-  };
+  const lightEndpoint = createOklch(0.995, baseOklch.c * 0.12, baseOklch.h);
 
-  const tokens: ColorToken[] = [];
+  /*
+   * Dark endpoint.
+   *
+   * We move toward a very dark version of the base
+   * color while reducing chroma enough to prevent
+   * extremely saturated colors from becoming muddy.
+   */
+  const darkEndpoint = createOklch(0.12, baseOklch.c * 0.45, baseOklch.h);
 
   for (const step of steps) {
     /*
-     * Base color is always exactly 500.
+     * 500 is ALWAYS the exact base color.
      */
-    if (step === 500) {
+    if (step === baseStep) {
       tokens.push({
+        name,
         step,
         hex: baseHex,
       });
@@ -433,51 +419,72 @@ export function generateColorScale(
       continue;
     }
 
-    let color: HslColor;
-
-    if (step < 500) {
-      color = interpolateColor(lightAnchor, base, lightAmounts[step]);
-    } else {
-      color = interpolateColor(base, darkAnchor, darkAmounts[step]);
-    }
+    let color: OklchColor;
 
     /*
-     * Saturation compensation.
-     *
-     * As we approach either extreme, saturation tends
-     * to become visually weaker. We compensate slightly.
+     * Light shades: 50 → 400
      */
-    const distanceFromMiddle = Math.abs(color.l - 0.5);
+    if (step < baseStep) {
+      const amount = lightAmounts[step];
 
-    const saturationBoost = distanceFromMiddle * base.s * 0.12;
+      color = interpolateOklch(baseOklch, lightEndpoint, amount);
+    } else {
+      /*
+       * Dark shades: 600 → 950
+       */
+      const amount = darkAmounts[step];
 
-    color = createHsl(color.h, clamp(color.s + saturationBoost), color.l);
+      color = interpolateOklch(baseOklch, darkEndpoint, amount);
+    }
 
-    tokens.push({
-      step,
-      hex: hslToHex(color),
-    });
+    tokens.push(createToken(name, step, oklchToHex(color)));
   }
 
   /*
    * Development-only debugging.
-   *
-   * This gives us useful brightness values instead of
-   * the previous 0/1 output.
    */
   if (process.env.NODE_ENV === "development") {
     console.table(
-      tokens.map((token) => ({
-        step: token.step,
-        hex: token.hex,
-        brightness: Number(getPerceivedBrightness(token.hex).toFixed(3)),
-      })),
+      tokens.map((token) => {
+        const hsl = toHsl(token.hex) as Hsl | undefined;
+
+        const oklch = toOklch(token.hex) as
+          | {
+              l?: number;
+              c?: number;
+              h?: number;
+            }
+          | undefined;
+
+        return {
+          step: token.step,
+          hex: token.hex,
+
+          /*
+           * This should be true ONLY for 500
+           * in a colored palette.
+           */
+          isBase: token.step === baseStep,
+
+          hue: oklch?.h !== undefined ? Number(oklch.h.toFixed(1)) : null,
+
+          chroma: oklch?.c !== undefined ? Number(oklch.c.toFixed(3)) : null,
+
+          oklchLightness:
+            oklch?.l !== undefined ? `${(oklch.l * 100).toFixed(1)}%` : null,
+
+          hslLightness:
+            hsl?.l !== undefined ? `${(hsl.l * 100).toFixed(1)}%` : null,
+
+          brightness: Number(getPerceivedBrightness(token.hex).toFixed(3)),
+        };
+      }),
     );
   }
 
   return {
     name,
-    baseStep: 500,
+    baseStep,
     tokens,
   };
 }

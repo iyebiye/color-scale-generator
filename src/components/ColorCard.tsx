@@ -1,6 +1,6 @@
 "use client";
 
-import type { KeyboardEvent } from "react";
+import { useState } from "react";
 import type { ColorToken } from "@/lib/colors/generate-scale";
 import { getOklch, getRgb } from "@/lib/colors/format-color";
 import ColorValue from "./ColorValue";
@@ -12,6 +12,10 @@ type ColorCardProps = {
   copiedValue: string | null;
   onCopy: (value: string) => void;
   onToggle: (step: number) => void;
+  onColorChange: (step: number, value: string) => void;
+  isModified: boolean;
+  onReset: () => void;
+  isEditing: boolean;
 };
 
 export default function ColorCard({
@@ -21,21 +25,40 @@ export default function ColorCard({
   copiedValue,
   onCopy,
   onToggle,
+  onColorChange,
+  isModified,
+  onReset,
+  isEditing,
 }: ColorCardProps) {
+  const [draftHex, setDraftHex] = useState<string | null>(null);
+
+  const displayedHex = draftHex ?? color.hex;
 
   const rgb = getRgb(color.hex);
   const oklch = getOklch(color.hex);
 
-  function handleRowClick() {
-    onCopy(color.hex);
+  function handleHexChange(value: string) {
+    setDraftHex(value);
+
+    const normalized = value.startsWith("#") ? value : `#${value}`;
+
+    if (/^#[0-9A-Fa-f]{6}$/.test(normalized)) {
+      onColorChange(color.step, normalized.toLowerCase());
+    }
   }
 
-  function handleKeyDown(
-    event: KeyboardEvent<HTMLDivElement>
-  ) {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      onCopy(color.hex);
+  function handleHexBlur() {
+    const normalized = displayedHex.startsWith("#")
+      ? displayedHex
+      : `#${displayedHex}`;
+
+    if (/^#[0-9A-Fa-f]{6}$/.test(normalized)) {
+      const formatted = normalized.toLowerCase();
+
+      setDraftHex(null);
+      onColorChange(color.step, formatted);
+    } else {
+      setDraftHex(null);
     }
   }
 
@@ -47,13 +70,7 @@ export default function ColorCard({
           : "border-gray-200 hover:border-gray-300"
       }`}
     >
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={handleRowClick}
-        onKeyDown={handleKeyDown}
-        className="flex cursor-pointer items-center gap-4 p-3"
-      >
+      <div className="flex items-center gap-4 p-3">
         <div
           className="h-16 w-20 shrink-0 rounded-lg"
           style={{
@@ -62,9 +79,7 @@ export default function ColorCard({
         />
 
         <div className="w-16 shrink-0">
-          <div className="text-sm font-medium">
-            {color.step}
-          </div>
+          <div className="text-sm font-medium">{color.step}</div>
 
           {isBase && (
             <div className="mt-1 inline-flex rounded-full bg-black px-2 py-0.5 text-[10px] font-medium text-white">
@@ -74,14 +89,48 @@ export default function ColorCard({
         </div>
 
         <div className="flex-1">
-          <div className="font-mono text-sm uppercase text-gray-700">
-            {color.hex}
-          </div>
+          {isEditing ? (
+            <div className="flex items-center">
+              <input
+                type="text"
+                value={displayedHex}
+                onChange={(event) => handleHexChange(event.target.value)}
+                onBlur={handleHexBlur}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.currentTarget.blur();
+                  }
+
+                  if (event.key === "Escape") {
+                    setDraftHex(null);
+                    event.currentTarget.blur();
+                  }
+                }}
+                aria-label={`Edit HEX value for ${color.step}`}
+                className="w-full max-w-40 rounded-md border border-gray-200 bg-white px-2 py-1 font-mono text-sm uppercase text-gray-700 outline-none transition focus:border-black focus:ring-1 focus:ring-black"
+              />
+
+              {isModified && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraftHex(null);
+                    onReset();
+                  }}
+                  className="ml-2 text-xs font-medium text-gray-500 underline underline-offset-2 hover:text-black"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="font-mono text-sm uppercase text-gray-700">
+              {color.hex}
+            </div>
+          )}
 
           {copiedValue === color.hex && (
-            <div className="mt-1 text-xs text-gray-400">
-              Copied!
-            </div>
+            <div className="mt-1 text-xs text-gray-400">Copied!</div>
           )}
         </div>
 
@@ -108,9 +157,7 @@ export default function ColorCard({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={`transition-transform ${
-              isExpanded ? "rotate-180" : ""
-            }`}
+            className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
           >
             <path d="m6 9 6 6 6-6" />
           </svg>
