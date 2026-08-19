@@ -8,6 +8,7 @@ import {
 import ColorInput from "@/components/ColorInput";
 import Palette from "@/components/Palette";
 import CssExport from "@/components/CssExport";
+import JsonExport from "@/components/JsonExport";
 
 export default function Home() {
   const [name, setName] = useState("Primary");
@@ -151,6 +152,7 @@ export default function Home() {
         )}
 
         {palette && <CssExport palette={palette} />}
+        {palette && <JsonExport palette={palette} />}
       </div>
     </main>
   );
