@@ -62,6 +62,11 @@ export default function ColorCard({
     }
   }
 
+  function handleReset() {
+    setDraftHex(null);
+    onReset();
+  }
+
   return (
     <div
       className={`overflow-hidden rounded-xl border transition ${
@@ -70,7 +75,7 @@ export default function ColorCard({
           : "border-gray-200 hover:border-gray-300"
       }`}
     >
-      <div className="flex items-center gap-4 p-3">
+      <div className="flex items-center gap-3 p-3">
         <div
           className="h-16 w-20 shrink-0 rounded-lg"
           style={{
@@ -113,10 +118,7 @@ export default function ColorCard({
               {isModified && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setDraftHex(null);
-                    onReset();
-                  }}
+                  onClick={handleReset}
                   className="ml-2 text-xs font-medium text-gray-500 underline underline-offset-2 hover:text-black"
                 >
                   Reset

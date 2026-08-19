@@ -17,6 +17,7 @@ export default function Home() {
   const [originalPalette, setOriginalPalette] = useState<ColorScale | null>(
     null,
   );
+  const [isEditing, setIsEditing] = useState(false);
 
   function generatePalette() {
     console.log("Generate clicked");
@@ -31,7 +32,8 @@ export default function Home() {
       console.log("Generated palette:", generated);
 
       setPalette(generated);
-      setOriginalPalette(generated);
+      setOriginalPalette(structuredClone(generated));
+      setIsEditing(false);
     } catch (error) {
       console.error("Palette generation failed:", error);
 
@@ -41,19 +43,28 @@ export default function Home() {
     }
   }
 
-  function updateColor(step: number, value: string) {
-    if (!palette) return;
+  function resetPalette() {
+    if (!originalPalette) return;
 
-    setPalette({
-      ...palette,
-      tokens: palette.tokens.map((token) =>
-        token.step === step
-          ? {
-              ...token,
-              hex: value,
-            }
-          : token,
-      ),
+    setPalette(structuredClone(originalPalette));
+    setIsEditing(false);
+  }
+
+  function updateColor(step: number, value: string) {
+    setPalette((current) => {
+      if (!current) return current;
+
+      return {
+        ...current,
+        tokens: current.tokens.map((token) =>
+          token.step === step
+            ? {
+                ...token,
+                hex: value,
+              }
+            : token,
+        ),
+      };
     });
   }
 
@@ -76,17 +87,6 @@ export default function Home() {
             }
           : token,
       ),
-    });
-  }
-
-  function resetPalette() {
-    if (!originalPalette) return;
-
-    setPalette({
-      ...originalPalette,
-      tokens: originalPalette.tokens.map((token) => ({
-        ...token,
-      })),
     });
   }
 
@@ -137,12 +137,15 @@ export default function Home() {
         {palette && originalPalette && (
           <Palette
             palette={palette}
+            originalPalette={originalPalette}
             copiedValue={copiedValue}
             onCopy={copyValue}
+            isEditing={isEditing}
+            onEdit={() => setIsEditing(true)}
+            onDone={() => setIsEditing(false)}
+            onReset={resetPalette}
             onColorChange={updateColor}
             onResetColor={resetColor}
-            onResetPalette={resetPalette}
-            originalPalette={originalPalette}
           />
         )}
       </div>
