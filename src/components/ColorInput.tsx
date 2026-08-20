@@ -40,7 +40,7 @@ export default function ColorInput({
         <input
           id="color-picker"
           type="color"
-          value={color}
+          value={color || "#0066FF"}
           onChange={(event) => onColorChange(event.target.value)}
           className="h-12 w-14 cursor-pointer rounded-lg border border-gray-200 p-1"
         />
