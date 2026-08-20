@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ColorScale } from "@/lib/colors/generate-scale";
 import { generateJsonTokens } from "@/lib/colors/export-json";
 import { downloadFile } from "@/lib/colors/download";
+import { generateFigmaTokens } from "@/lib/export/figma-tokens";
 
 type JsonExportProps = {
   palette: ColorScale;
@@ -39,20 +40,36 @@ export default function JsonExport({ palette }: JsonExportProps) {
   }
 
   function handleDownload() {
-    downloadFile(
-      json,
-      getFilename(),
-      "application/json;charset=utf-8",
-    );
+    downloadFile(json, getFilename(), "application/json;charset=utf-8");
+  }
+
+  function exportFigmaTokens() {
+    if (!palette) return;
+
+    const tokens = generateFigmaTokens(palette);
+
+    const blob = new Blob([JSON.stringify(tokens, null, 2)], {
+      type: "application/json",
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${palette.name.toLowerCase().replace(/\s+/g, "-")}-figma.json`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
   }
 
   return (
     <section className="mt-8">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">
-            Design Tokens
-          </h2>
+          <h2 className="text-xl font-semibold">Design Tokens</h2>
 
           <p className="mt-1 text-sm text-gray-500">
             Export your palette as structured JSON tokens.
@@ -74,6 +91,14 @@ export default function JsonExport({ palette }: JsonExportProps) {
             className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800"
           >
             Download JSON
+          </button>
+
+          <button
+            type="button"
+            onClick={exportFigmaTokens}
+            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium transition hover:bg-gray-50"
+          >
+            Figma Tokens
           </button>
         </div>
       </div>
