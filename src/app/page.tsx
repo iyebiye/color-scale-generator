@@ -24,11 +24,9 @@ export default function Home() {
 
   const [selectedPaletteIndex, setSelectedPaletteIndex] = useState(0);
 
-  const selectedPalette =
-    palettes[selectedPaletteIndex] ?? null;
+  const selectedPalette = palettes[selectedPaletteIndex] ?? null;
 
-  const originalPalette =
-    originalPalettes[selectedPaletteIndex] ?? null;
+  const originalPalette = originalPalettes[selectedPaletteIndex] ?? null;
 
   const [copiedValue, setCopiedValue] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -51,10 +49,7 @@ export default function Home() {
     }
 
     try {
-      const generated = generateColorScale(
-        color,
-        name.trim() || "Primary",
-      );
+      const generated = generateColorScale(color, name.trim() || "Primary");
 
       setPalettes((current) => {
         const newIndex = current.length;
@@ -80,10 +75,7 @@ export default function Home() {
     }
   }
 
-  function updateSelectedPalette(
-    step: number,
-    value: string,
-  ) {
+  function updateSelectedPalette(step: number, value: string) {
     setPalettes((current) =>
       current.map((palette, paletteIndex) => {
         if (paletteIndex !== selectedPaletteIndex) {
@@ -112,9 +104,7 @@ export default function Home() {
 
     setPalettes((current) =>
       current.map((palette, index) =>
-        index === selectedPaletteIndex
-          ? structuredClone(original)
-          : palette,
+        index === selectedPaletteIndex ? structuredClone(original) : palette,
       ),
     );
 
@@ -126,9 +116,7 @@ export default function Home() {
 
     if (!original) return;
 
-    const originalToken = original.tokens.find(
-      (token) => token.step === step,
-    );
+    const originalToken = original.tokens.find((token) => token.step === step);
 
     if (!originalToken) return;
 
@@ -184,48 +172,42 @@ export default function Home() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-xl leading-8 text-gray-600">
-              Generate a complete color scale from your brand color,
-              refine individual tokens, and export your system for
-              development and design workflows.
+              Generate a complete color scale from your brand color, refine
+              individual tokens, and export your system for development and
+              design workflows.
             </p>
 
             <div className="mt-12 grid gap-6 sm:grid-cols-3">
               <div className="rounded-2xl border border-gray-200 p-6">
                 <div className="text-2xl">01</div>
 
-                <h2 className="mt-4 font-semibold">
-                  Generate
-                </h2>
+                <h2 className="mt-4 font-semibold">Generate</h2>
 
                 <p className="mt-2 text-sm leading-6 text-gray-500">
-                  Start with a single HEX color and generate
-                  a complete scale of tints and shades.
+                  Start with a single HEX color and generate a complete scale of
+                  tints and shades.
                 </p>
               </div>
 
               <div className="rounded-2xl border border-gray-200 p-6">
                 <div className="text-2xl">02</div>
 
-                <h2 className="mt-4 font-semibold">
-                  Refine
-                </h2>
+                <h2 className="mt-4 font-semibold">Refine</h2>
 
                 <p className="mt-2 text-sm leading-6 text-gray-500">
-                  Review your colors individually or see the
-                  entire color system together.
+                  Review your colors individually or see the entire color system
+                  together.
                 </p>
               </div>
 
               <div className="rounded-2xl border border-gray-200 p-6">
                 <div className="text-2xl">03</div>
 
-                <h2 className="mt-4 font-semibold">
-                  Export
-                </h2>
+                <h2 className="mt-4 font-semibold">Export</h2>
 
                 <p className="mt-2 text-sm leading-6 text-gray-500">
-                  Export your tokens as CSS or JSON for use
-                  in your development workflow.
+                  Export your tokens as CSS or JSON for use in your development
+                  workflow.
                 </p>
               </div>
             </div>
@@ -262,14 +244,16 @@ export default function Home() {
             setView("colors");
             setIsEditing(false);
           }}
+          onDashboard={() => {
+            setView("dashboard");
+            setIsEditing(false);
+          }}
         />
       )}
 
       <div
         className={
-          palettes.length > 0
-            ? "ml-[280px] min-h-screen"
-            : "min-h-screen"
+          palettes.length > 0 ? "ml-[280px] min-h-screen" : "min-h-screen"
         }
       >
         {view === "add-color" && (
@@ -284,8 +268,8 @@ export default function Home() {
               </h1>
 
               <p className="mt-4 max-w-xl text-gray-600">
-                Enter a base color and ColorLab will generate
-                its complete color scale.
+                Enter a base color and ColorLab will generate its complete color
+                scale.
               </p>
             </div>
 

@@ -8,6 +8,7 @@ type ColorScaleSidebarProps = {
   onSelect: (index: number) => void;
   onAddColor: () => void;
   onAllColors: () => void;
+  onDashboard: () => void;
 };
 
 export default function ColorScaleSidebar({
@@ -16,14 +17,19 @@ export default function ColorScaleSidebar({
   onSelect,
   onAddColor,
   onAllColors,
+  onDashboard,
 }: ColorScaleSidebarProps) {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col border-r border-gray-200 bg-gray-50">
       {/* Header */}
       <div className="border-b border-gray-200 px-6 py-6">
-        <p className="text-sm font-semibold tracking-[0.2em] text-gray-900">
+        <button
+          type="button"
+          onClick={onDashboard}
+          className="text-sm font-semibold tracking-[0.2em] text-gray-900 transition hover:text-gray-500"
+        >
           COLORLAB
-        </p>
+        </button>
       </div>
 
       {/* Navigation */}
@@ -45,9 +51,8 @@ export default function ColorScaleSidebar({
         <div className="space-y-1">
           {palettes.map((palette, index) => {
             const baseColor =
-              palette.tokens.find(
-                (token) => token.step === palette.baseStep,
-              )?.hex ?? "";
+              palette.tokens.find((token) => token.step === palette.baseStep)
+                ?.hex ?? "";
 
             const isSelected = selectedIndex === index;
 
