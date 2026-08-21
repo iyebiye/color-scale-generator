@@ -11,7 +11,7 @@ import CssExport from "@/components/CssExport";
 import JsonExport from "@/components/JsonExport";
 import ColorScaleSidebar from "@/components/ColorScaleSidebar";
 
-type View = "dashboard" | "add-color" | "colors";
+type View = "dashboard" | "add-color" | "colors" | "all-colors";
 
 export default function Home() {
   const [view, setView] = useState<View>("dashboard");
@@ -241,7 +241,7 @@ export default function Home() {
           }}
           onAddColor={openAddColor}
           onAllColors={() => {
-            setView("colors");
+            setView("all-colors");
             setIsEditing(false);
           }}
           onDashboard={() => {
@@ -284,6 +284,75 @@ export default function Home() {
               }}
               onGenerate={generatePalette}
             />
+          </div>
+        )}
+
+        {view === "all-colors" && (
+          <div className="mx-auto max-w-6xl px-10 py-16">
+            <div className="mb-10">
+              <p className="text-sm font-medium tracking-wide text-gray-500">
+                COLOR SYSTEM
+              </p>
+
+              <h1 className="mt-3 text-4xl font-semibold tracking-tight">
+                All colors
+              </h1>
+
+              <p className="mt-4 max-w-xl text-gray-600">
+                View all the color scales you've generated in one place.
+              </p>
+            </div>
+
+            <div className="space-y-10">
+              {palettes.map((palette, index) => (
+                <button
+                  key={`${palette.name}-${index}`}
+                  type="button"
+                  onClick={() => {
+                    setSelectedPaletteIndex(index);
+                    setView("colors");
+                    setIsEditing(false);
+                  }}
+                  className="block w-full text-left"
+                >
+                  <div className="mb-4 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold">{palette.name}</h2>
+
+                      <p className="mt-1 text-sm text-gray-500">
+                        {palette.tokens.length} color tokens
+                      </p>
+                    </div>
+
+                    <span className="text-sm text-gray-400">View scale →</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-gray-200 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11">
+                    {palette.tokens.map((token) => (
+                      <div
+                        key={token.step}
+                        className="group relative h-24"
+                        style={{
+                          backgroundColor: token.hex,
+                        }}
+                      >
+                        <div className="absolute inset-x-0 bottom-0 bg-black/0 px-2 py-2 transition group-hover:bg-black/10">
+                          <span
+                            className="text-xs font-medium"
+                            style={{
+                              color:
+                                token.brightness > 0.6 ? "#000000" : "#FFFFFF",
+                            }}
+                          >
+                            {token.step}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
