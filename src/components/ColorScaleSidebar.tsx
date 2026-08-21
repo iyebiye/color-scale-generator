@@ -9,6 +9,7 @@ type ColorScaleSidebarProps = {
   onAddColor: () => void;
   onAllColors: () => void;
   onDashboard: () => void;
+  activeView: "all-colors" | "palette" | "add-color";
 };
 
 export default function ColorScaleSidebar({
@@ -18,6 +19,7 @@ export default function ColorScaleSidebar({
   onAddColor,
   onAllColors,
   onDashboard,
+  activeView,
 }: ColorScaleSidebarProps) {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col border-r border-gray-200 bg-gray-50">
@@ -33,11 +35,15 @@ export default function ColorScaleSidebar({
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 px-4 py-6">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
         <button
           type="button"
           onClick={onAllColors}
-          className="mb-6 w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 transition hover:bg-white"
+          className={`mb-6 w-full rounded-lg px-3 py-2 text-left text-sm transition ${
+            activeView === "all-colors"
+              ? "font-semibold text-gray-900"
+              : "font-medium text-gray-700 hover:bg-white"
+          }`}
         >
           All colors
         </button>
@@ -54,7 +60,8 @@ export default function ColorScaleSidebar({
               palette.tokens.find((token) => token.step === palette.baseStep)
                 ?.hex ?? "";
 
-            const isSelected = selectedIndex === index;
+            const isSelected =
+              activeView === "palette" && selectedIndex === index;
 
             return (
               <button

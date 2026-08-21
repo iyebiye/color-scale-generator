@@ -10,8 +10,9 @@ import Palette from "@/components/Palette";
 import CssExport from "@/components/CssExport";
 import JsonExport from "@/components/JsonExport";
 import ColorScaleSidebar from "@/components/ColorScaleSidebar";
+import AllColorsExport from "@/components/AllColorsExport";
 
-type View = "dashboard" | "add-color" | "colors" | "all-colors";
+type View = "dashboard" | "add-color" | "all-colors" | "colors";
 
 export default function Home() {
   const [view, setView] = useState<View>("dashboard");
@@ -31,6 +32,18 @@ export default function Home() {
   const [copiedValue, setCopiedValue] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+
+  function getContrastText(hex: string) {
+    const cleanHex = hex.replace("#", "");
+
+    const r = parseInt(cleanHex.slice(0, 2), 16);
+    const g = parseInt(cleanHex.slice(2, 4), 16);
+    const b = parseInt(cleanHex.slice(4, 6), 16);
+
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+
+    return brightness > 150 ? "#000000" : "#FFFFFF";
+  }
 
   function openAddColor() {
     setName("");
@@ -248,6 +261,13 @@ export default function Home() {
             setView("dashboard");
             setIsEditing(false);
           }}
+          activeView={
+            view === "all-colors"
+              ? "all-colors"
+              : view === "add-color"
+                ? "add-color"
+                : "palette"
+          }
         />
       )}
 
@@ -299,7 +319,7 @@ export default function Home() {
               </h1>
 
               <p className="mt-4 max-w-xl text-gray-600">
-                View all the color scales you've generated in one place.
+                View all the color scales you&apos;ve generated in one place.
               </p>
             </div>
 
@@ -340,8 +360,7 @@ export default function Home() {
                           <span
                             className="text-xs font-medium"
                             style={{
-                              color:
-                                token.brightness > 0.6 ? "#000000" : "#FFFFFF",
+                              color: getContrastText(token.hex),
                             }}
                           >
                             {token.step}
@@ -353,6 +372,8 @@ export default function Home() {
                 </button>
               ))}
             </div>
+
+            <AllColorsExport palettes={palettes} />
           </div>
         )}
 
