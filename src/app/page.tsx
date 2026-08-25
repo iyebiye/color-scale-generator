@@ -26,6 +26,10 @@ export default function Home() {
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
+  const [renameModalIndex, setRenameModalIndex] = useState<number | null>(null);
+  const [deleteModalIndex, setDeleteModalIndex] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
   const [palettes, setPalettes] = useState<ColorScale[]>(() => {
     if (typeof window === "undefined") return [];
 
@@ -62,7 +66,26 @@ export default function Home() {
     } catch (error) {
       console.error("Failed to save ColorLab data:", error);
     }
-  }, [palettes, originalPalettes]);
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+
+      if (renameModalIndex !== null) {
+        setRenameModalIndex(null);
+        setRenameValue("");
+      }
+
+      if (deleteModalIndex !== null) {
+        setDeleteModalIndex(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [palettes, originalPalettes, renameModalIndex, deleteModalIndex]);
 
   function getContrastText(hex: string) {
     const cleanHex = hex.replace("#", "");
@@ -183,6 +206,90 @@ export default function Home() {
         };
       }),
     );
+  }
+
+  function openRenameModal(index: number) {
+    const palette = palettes[index];
+
+    if (!palette) return;
+
+    setRenameModalIndex(index);
+    setRenameValue(palette.name);
+  }
+
+  function renamePalette() {
+    if (renameModalIndex === null) return;
+
+    const trimmedName = renameValue.trim();
+
+    if (!trimmedName) return;
+
+    setPalettes((current) =>
+      current.map((palette, index) =>
+        index === renameModalIndex
+          ? {
+              ...palette,
+              name: trimmedName,
+            }
+          : palette,
+      ),
+    );
+
+    setOriginalPalettes((current) =>
+      current.map((palette, index) =>
+        index === renameModalIndex
+          ? {
+              ...palette,
+              name: trimmedName,
+            }
+          : palette,
+      ),
+    );
+
+    setRenameModalIndex(null);
+    setRenameValue("");
+  }
+
+  function openDeleteModal(index: number) {
+    setDeleteModalIndex(index);
+  }
+
+  function deletePalette() {
+    if (deleteModalIndex === null) return;
+
+    const index = deleteModalIndex;
+
+    const remainingPalettes = palettes.filter(
+      (_, paletteIndex) => paletteIndex !== index,
+    );
+
+    const remainingOriginalPalettes = originalPalettes.filter(
+      (_, paletteIndex) => paletteIndex !== index,
+    );
+
+    setPalettes(remainingPalettes);
+    setOriginalPalettes(remainingOriginalPalettes);
+
+    setDeleteModalIndex(null);
+
+    if (remainingPalettes.length === 0) {
+      setSelectedPaletteIndex(0);
+      setView("dashboard");
+      setIsEditing(false);
+      return;
+    }
+
+    let nextIndex = selectedPaletteIndex;
+
+    if (index === selectedPaletteIndex) {
+      nextIndex = Math.min(index, remainingPalettes.length - 1);
+    } else if (index < selectedPaletteIndex) {
+      nextIndex = selectedPaletteIndex - 1;
+    }
+
+    setSelectedPaletteIndex(nextIndex);
+    setView("colors");
+    setIsEditing(false);
   }
 
   async function copyValue(value: string) {
@@ -306,6 +413,8 @@ export default function Home() {
             setView("dashboard");
             setIsEditing(false);
           }}
+          onRename={openRenameModal}
+          onDelete={openDeleteModal}
           activeView={
             view === "all-colors"
               ? "all-colors"
@@ -444,6 +553,143 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* Rename Modal */}
+      {renameModalIndex !== null && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
+          onMouseDown={() => {
+            setRenameModalIndex(null);
+            setRenameValue("");
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rename-color-title"
+            className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div>
+              <h2
+                id="rename-color-title"
+                className="mt-2 text-xl font-semibold text-gray-900"
+              >
+                Rename color scale
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-gray-500">
+                Give this color scale a name that is easy to identify.
+              </p>
+            </div>
+
+            <div className="mt-6">
+              <label
+                htmlFor="rename-color-input"
+                className="mb-2 block text-sm font-medium text-gray-700"
+              >
+                Color scale name
+              </label>
+
+              <input
+                id="rename-color-input"
+                type="text"
+                value={renameValue}
+                onChange={(event) => setRenameValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    setRenameModalIndex(null);
+                    setRenameValue("");
+                  }
+
+                  if (event.key === "Enter") {
+                    renamePalette();
+                  }
+                }}
+                autoFocus
+                className="h-12 w-full rounded-lg border border-gray-200 px-4 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                placeholder="Primary"
+              />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setRenameModalIndex(null);
+                  setRenameValue("");
+                }}
+                className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={renamePalette}
+                disabled={!renameValue.trim()}
+                className="rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Modal  */}
+      {deleteModalIndex !== null && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
+          onMouseDown={() => {
+            setDeleteModalIndex(null);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-color-title"
+            className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div>
+              <h2
+                id="delete-color-title"
+                className="mt-2 text-xl font-semibold text-gray-900"
+              >
+                Delete{" "}
+                {palettes[deleteModalIndex]?.name
+                  ? `"${palettes[deleteModalIndex].name}"`
+                  : "color scale"}
+                ?
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-gray-500">
+                This will permanently remove this color scale from your ColorLab
+                project. This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteModalIndex(null)}
+                className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={deletePalette}
+                className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

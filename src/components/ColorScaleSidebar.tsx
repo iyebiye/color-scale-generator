@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { ColorScale } from "@/lib/colors/generate-scale";
 
 type ColorScaleSidebarProps = {
@@ -9,7 +10,9 @@ type ColorScaleSidebarProps = {
   onAddColor: () => void;
   onAllColors: () => void;
   onDashboard: () => void;
-  activeView: "all-colors" | "palette" | "add-color";
+  onRename: (index: number) => void;
+  onDelete: (index: number) => void;
+  activeView: "all-colors" | "add-color" | "palette";
 };
 
 export default function ColorScaleSidebar({
@@ -19,8 +22,28 @@ export default function ColorScaleSidebar({
   onAddColor,
   onAllColors,
   onDashboard,
+  onRename,
+  onDelete,
   activeView,
 }: ColorScaleSidebarProps) {
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+
+      if (!target.closest("[data-color-menu]")) {
+        setOpenMenuIndex(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col border-r border-gray-200 bg-gray-50">
       {/* Header */}
@@ -38,10 +61,13 @@ export default function ColorScaleSidebar({
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
         <button
           type="button"
-          onClick={onAllColors}
+          onClick={() => {
+            setOpenMenuIndex(null);
+            onAllColors();
+          }}
           className={`mb-6 w-full rounded-lg px-3 py-2 text-left text-sm transition ${
             activeView === "all-colors"
-              ? "font-semibold text-gray-900"
+              ? "font-bold text-gray-900"
               : "font-medium text-gray-700 hover:bg-white"
           }`}
         >
@@ -61,36 +87,98 @@ export default function ColorScaleSidebar({
                 ?.hex ?? "";
 
             const isSelected =
-              activeView === "palette" && selectedIndex === index;
+              selectedIndex === index && activeView === "palette";
+
+            const isMenuOpen = openMenuIndex === index;
 
             return (
-              <button
+              <div
                 key={`${palette.name}-${index}`}
-                type="button"
-                onClick={() => onSelect(index)}
-                className={`w-full rounded-lg p-2 text-left transition ${
-                  isSelected
-                    ? "bg-white shadow-sm ring-1 ring-gray-200"
-                    : "hover:bg-white/70"
-                }`}
+                className="relative"
+                data-color-menu
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                }}
               >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="h-8 w-8 shrink-0 rounded-md border border-black/5"
-                    style={{ backgroundColor: baseColor }}
-                  />
+                <div
+                  className={`flex w-full items-center rounded-lg transition ${
+                    isSelected
+                      ? "bg-white shadow-sm ring-1 ring-gray-200"
+                      : "hover:bg-white/70"
+                  }`}
+                >
+                  {/* Palette */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenMenuIndex(null);
+                      onSelect(index);
+                    }}
+                    className="min-w-0 flex-1 p-2 text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-8 w-8 shrink-0 rounded-md border border-black/5"
+                        style={{ backgroundColor: baseColor }}
+                      />
 
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-900">
-                      {palette.name}
-                    </p>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-gray-900">
+                          {palette.name}
+                        </p>
 
-                    <p className="font-mono text-xs uppercase text-gray-400">
-                      {baseColor}
-                    </p>
-                  </div>
+                        <p className="font-mono text-xs uppercase text-gray-400">
+                          {baseColor}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* More actions */}
+                  <button
+                    type="button"
+                    aria-label={`Actions for ${palette.name}`}
+                    aria-expanded={isMenuOpen}
+                    onClick={(event) => {
+                      event.stopPropagation();
+
+                      setOpenMenuIndex((current) =>
+                        current === index ? null : index,
+                      );
+                    }}
+                    className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+                  >
+                    <span className="text-lg leading-none">•••</span>
+                  </button>
                 </div>
-              </button>
+
+                {/* Menu */}
+                {isMenuOpen && (
+                  <div className="absolute right-2 top-full z-50 mt-1 w-36 overflow-hidden rounded-lg border border-gray-200 bg-white p-1 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenMenuIndex(null);
+                        onRename(index);
+                      }}
+                      className="w-full rounded-md px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-gray-50"
+                    >
+                      Rename
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenMenuIndex(null);
+                        onDelete(index);
+                      }}
+                      className="w-full rounded-md px-3 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -100,7 +188,10 @@ export default function ColorScaleSidebar({
       <div className="border-t border-gray-200 p-4">
         <button
           type="button"
-          onClick={onAddColor}
+          onClick={() => {
+            setOpenMenuIndex(null);
+            onAddColor();
+          }}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition hover:bg-gray-800"
         >
           <span className="text-lg leading-none">+</span>
