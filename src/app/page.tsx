@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   generateColorScale,
   type ColorScale,
@@ -20,18 +20,49 @@ export default function Home() {
   const [name, setName] = useState("");
   const [color, setColor] = useState("");
 
-  const [palettes, setPalettes] = useState<ColorScale[]>([]);
-  const [originalPalettes, setOriginalPalettes] = useState<ColorScale[]>([]);
-
   const [selectedPaletteIndex, setSelectedPaletteIndex] = useState(0);
+
+  const [copiedValue, setCopiedValue] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+
+  const [palettes, setPalettes] = useState<ColorScale[]>(() => {
+    if (typeof window === "undefined") return [];
+
+    try {
+      const saved = localStorage.getItem("colorlab-palettes");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [originalPalettes, setOriginalPalettes] = useState<ColorScale[]>(() => {
+    if (typeof window === "undefined") return [];
+
+    try {
+      const saved = localStorage.getItem("colorlab-original-palettes");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const selectedPalette = palettes[selectedPaletteIndex] ?? null;
 
   const originalPalette = originalPalettes[selectedPaletteIndex] ?? null;
 
-  const [copiedValue, setCopiedValue] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
+  useEffect(() => {
+    try {
+      localStorage.setItem("colorlab-palettes", JSON.stringify(palettes));
+      localStorage.setItem(
+        "colorlab-original-palettes",
+        JSON.stringify(originalPalettes),
+      );
+    } catch (error) {
+      console.error("Failed to save ColorLab data:", error);
+    }
+  }, [palettes, originalPalettes]);
 
   function getContrastText(hex: string) {
     const cleanHex = hex.replace("#", "");
@@ -175,62 +206,76 @@ export default function Home() {
     return (
       <main className="min-h-screen bg-white text-gray-900">
         <div className="mx-auto flex min-h-screen max-w-6xl items-center px-8 py-16">
-          <div className="max-w-3xl">
+          <div className="w-full max-w-4xl">
+            {/* Brand */}
             <p className="text-sm font-semibold tracking-[0.2em] text-gray-500">
               COLORLAB
             </p>
 
-            <h1 className="mt-6 text-6xl font-semibold tracking-tight">
-              Build a color system from a single color.
+            {/* Hero */}
+            <h1 className="mt-6 max-w-4xl text-5xl font-semibold tracking-tight sm:text-6xl">
+              Create your color system once. Use it everywhere.
             </h1>
 
-            <p className="mt-6 max-w-2xl text-xl leading-8 text-gray-600">
-              Generate a complete color scale from your brand color, refine
-              individual tokens, and export your system for development and
-              design workflows.
+            <p className="mt-6 max-w-3xl text-xl leading-8 text-gray-600">
+              Generate a complete color scale from a single brand color, built
+              for product designers and developers.
             </p>
 
-            <div className="mt-12 grid gap-6 sm:grid-cols-3">
+            {/* Features */}
+            <div className="mt-16 grid gap-6 sm:grid-cols-3">
+              {/* Design */}
               <div className="rounded-2xl border border-gray-200 p-6">
-                <div className="text-2xl">01</div>
+                <div className="text-sm font-medium text-gray-400">01</div>
 
-                <h2 className="mt-4 font-semibold">Generate</h2>
+                <h2 className="mt-4 text-lg font-semibold">
+                  Build your color scale
+                </h2>
 
-                <p className="mt-2 text-sm leading-6 text-gray-500">
-                  Start with a single HEX color and generate a complete scale of
-                  tints and shades.
+                <p className="mt-3 text-sm leading-6 text-gray-500">
+                  Start with a single brand color and generate a complete scale
+                  of tints and shades. Refine individual tokens and create a
+                  color system that works for your product.
                 </p>
               </div>
 
+              {/* Collaboration */}
               <div className="rounded-2xl border border-gray-200 p-6">
-                <div className="text-2xl">02</div>
+                <div className="text-sm font-medium text-gray-400">02</div>
 
-                <h2 className="mt-4 font-semibold">Refine</h2>
+                <h2 className="mt-4 text-lg font-semibold">
+                  One color system for design and development
+                </h2>
 
-                <p className="mt-2 text-sm leading-6 text-gray-500">
-                  Review your colors individually or see the entire color system
-                  together.
+                <p className="mt-3 text-sm leading-6 text-gray-500">
+                  Keep designers and developers working from the same color
+                  values. What you create in ColorLab can be used across your
+                  design files and product code.
                 </p>
               </div>
 
+              {/* Development */}
               <div className="rounded-2xl border border-gray-200 p-6">
-                <div className="text-2xl">03</div>
+                <div className="text-sm font-medium text-gray-400">03</div>
 
-                <h2 className="mt-4 font-semibold">Export</h2>
+                <h2 className="mt-4 text-lg font-semibold">
+                  Take your colors straight into design and code
+                </h2>
 
-                <p className="mt-2 text-sm leading-6 text-gray-500">
-                  Export your tokens as CSS or JSON for use in your development
-                  workflow.
+                <p className="mt-3 text-sm leading-6 text-gray-500">
+                  Copy individual colors or export your complete color system as
+                  Figma Tokens or CSS and JSON for your development workflow.
                 </p>
               </div>
             </div>
 
+            {/* CTA */}
             <button
               type="button"
               onClick={openAddColor}
-              className="mt-12 rounded-xl bg-gray-900 px-6 py-3 font-medium text-white transition hover:bg-gray-800"
+              className="mt-10 rounded-xl bg-gray-900 px-6 py-3 font-medium text-white transition hover:bg-gray-800"
             >
-              Get started
+              Create your first color scale
             </button>
           </div>
         </div>
